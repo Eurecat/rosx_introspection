@@ -145,7 +145,8 @@ public:
 
   bool deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_txt,
                            Deserializer* deserializer, int indent = 0,
-                           bool ignore_constants = false) const;
+                           bool ignore_constants = false,
+                           const std::vector<std::string> ignore_fields = {}) const;
 
   bool serializeFromJson(const std::string_view json_string,
                          Serializer* serializer) const;
@@ -255,3 +256,4 @@ private:
 };
 
 }  // namespace RosMsgParser
+

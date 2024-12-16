@@ -250,7 +250,8 @@ bool Parser::deserialize(Span<const uint8_t> buffer, FlatMessage* flat_container
 
 bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_txt,
                                  Deserializer* deserializer, int indent,
-                                 bool ignore_constants) const
+                                 bool ignore_constants,
+                                 const std::vector<std::string> ignore_fields) const
 {
   deserializer->init(buffer);
 
@@ -268,6 +269,10 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
     for (const ROSField& field : msg_node->fields())
     {
       if (field.isConstant() && ignore_constants)
+      {
+        continue;
+      }
+      if (std::find(ignore_fields.begin(), ignore_fields.end(),  field.name()) != ignore_fields.end())
       {
         continue;
       }
@@ -604,3 +609,4 @@ bool Parser::serializeFromJson(const std::string_view json_string,
 }
 
 }  // namespace RosMsgParser
+
