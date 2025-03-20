@@ -89,17 +89,28 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(const std::string& 
   std::ifstream file{ share_dir + "/msg/" + match[2].str() + ".msg" };
   std::string contents{""};
   if (!file) {
-      // Try to open a Srv message file
+      // Try to open a Srv message file "humble"
       file.open ( share_dir + "/srv/" + match[2].str() + ".msg" );
       if (!file)
       {
-        // Try to open an Action file
+        // Get the filename without the extension
         size_t pos = match[2].str().find('_');
-        std::string action_file;
+        std::string file_name;
         if (pos != std::string::npos) 
         {
-          action_file = match[2].str().substr(0, pos);  // Keep the part before '_'
-          file.open ( share_dir + "/action/" + action_file + ".action" );
+          file_name = match[2].str().substr(0, pos);  // Keep the part before '_'
+        }
+        else
+        {
+          file_name = match[2].str();
+        }
+
+        // Try to open a Srv message file "Jazzy"
+        file.open ( share_dir + "/srv/" + file_name + ".srv" );
+        if (!file)
+        {
+          // Try to open an Action file
+          file.open ( share_dir + "/action/" + file_name + ".action" );
           if (!file)
           {
              throw std::invalid_argument("Could not open the Message file: " + datatype);
@@ -144,7 +155,38 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(const std::string& 
           }
         }
         else
-          throw std::invalid_argument("Could not open the Message file: " + datatype);
+        {
+          //PARSE THE SERVICE FILE 
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          std::string content = buffer.str();
+          const std::string delimiter = "---";
+          std::vector<std::string> parts;
+          size_t pos = 0;
+          size_t found;
+
+          while ((found = content.find(delimiter, pos)) != std::string::npos) {
+              parts.push_back(content.substr(pos, found - pos));
+              pos = found + delimiter.length();
+          }
+          parts.push_back(content.substr(pos));
+          if (parts.size() != 2) {
+              throw std::invalid_argument("Error parsing service message: " + datatype);
+          }
+          else
+          {
+            if (match[2].str().rfind("_Request")!=std::string::npos)
+            {
+              //Parse GOAL message
+              contents = parts[0];
+            }
+            else if (match[2].str().rfind("_Result")!=std::string::npos)
+            {
+              //Parse Result message
+              contents = parts[1];
+            }
+          }
+        }
       }
   }
   if (contents.empty())
