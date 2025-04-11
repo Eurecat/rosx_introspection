@@ -251,7 +251,8 @@ bool Parser::deserialize(Span<const uint8_t> buffer, FlatMessage* flat_container
 bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_txt,
                                  Deserializer* deserializer, int indent,
                                  bool ignore_constants,
-                                 const std::vector<std::string> ignore_fields) const
+                                 bool ignore_big_arrays,
+                                 const std::vector<std::string>& ignore_fields) const
 {
   deserializer->init(buffer);
 
@@ -260,9 +261,9 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
 
   size_t buffer_offset = 0;
 
-  std::function<void(const ROSMessage*, rapidjson::Value&)> deserializeImpl;
+  std::function<void(const ROSMessage*, rapidjson::Value&, const std::string&)> deserializeImpl;
 
-  deserializeImpl = [&](const ROSMessage* msg_node, rapidjson::Value& json_value) {
+  deserializeImpl = [&](const ROSMessage* msg_node, rapidjson::Value& json_value, const std::string& prefix_path) {
     size_t index_s = 0;
     size_t index_m = 0;
 
@@ -272,7 +273,8 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
       {
         continue;
       }
-      if (std::find(ignore_fields.begin(), ignore_fields.end(),  field.name()) != ignore_fields.end())
+      std::string full_field_name = prefix_path + "/" + field.name();
+      if (std::find(ignore_fields.begin(), ignore_fields.end(),  full_field_name) != ignore_fields.end())
       {
         continue;
       }
@@ -291,6 +293,7 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
       {
         if (buffer_offset + array_size > static_cast<std::size_t>(buffer.size()))
         {
+          if(ignore_big_arrays) continue;
           throw std::runtime_error("Buffer overrun in blob");
         }
         buffer_offset += array_size;
@@ -381,7 +384,7 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
             break;
             case OTHER: {
               auto msg_node_child = field.getMessagePtr(_schema->msg_library);
-              deserializeImpl(msg_node_child.get(), new_value);
+              deserializeImpl(msg_node_child.get(), new_value, full_field_name);
             }
             break;
           }  // end switch
@@ -416,7 +419,7 @@ bool Parser::deserializeIntoJson(Span<const uint8_t> buffer, std::string* json_t
       _schema->field_tree.croot()->value()->getMessagePtr(_schema->msg_library);
 
   rapidjson::Value& json_node = json_document.SetObject();
-  deserializeImpl(root_msg.get(), json_node);
+  deserializeImpl(root_msg.get(), json_node, "");
 
   static rapidjson::StringBuffer json_buffer;
   json_buffer.Reserve(65536);
