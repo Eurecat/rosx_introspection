@@ -515,60 +515,119 @@ bool Parser::serializeFromJson(const std::string_view json_string,
         switch (type_id)
         {
           case BOOL:
-            serializer->serialize(type_id, value_field->GetBool());
+            if(value_field->IsBool())
+              serializer->serialize(type_id, value_field->GetBool());
+            else
+              throw std::invalid_argument(std::string("Expected a boolean value in field: ") +
+                 field.name());
             break;
           case CHAR:
-            serializer->serialize(type_id, value_field->GetString()[0]);
+            if(value_field->IsString())
+              serializer->serialize(type_id, value_field->GetString()[0]);
+            else
+              throw std::invalid_argument(std::string("Expected a string value in field: ") +
+                     field.name());
             break;
 
           case BYTE:
           case UINT8:
-            serializer->serialize(type_id, uint8_t(value_field->GetUint()));
+            if(value_field->IsUint())
+              serializer->serialize(type_id, uint8_t(value_field->GetUint()));
+            else
+              throw std::invalid_argument(std::string("Expected an unsigned integer value in field: ") +
+                     field.name());
             break;
           case UINT16:
-            serializer->serialize(type_id, uint16_t(value_field->GetUint()));
+            if(value_field->IsUint())
+              serializer->serialize(type_id, uint16_t(value_field->GetUint()));
+            else
+              throw std::invalid_argument(std::string("Expected an unsigned integer value in field: ") +
+                     field.name());
             break;
           case UINT32:
-            serializer->serialize(type_id, value_field->GetUint());
+            if(value_field->IsUint())
+              serializer->serialize(type_id, value_field->GetUint());
+            else
+              throw std::invalid_argument(std::string("Expected an unsigned integer value in field: ") +
+                     field.name());
             break;
           case UINT64:
-            serializer->serialize(type_id, value_field->GetUint64());
+            if(value_field->IsUint64())
+              serializer->serialize(type_id, value_field->GetUint64());
+            else
+              throw std::invalid_argument(std::string("Expected an unsigned integer value in field: ") +
+                     field.name());
             break;
 
-            break;
           case INT8:
-            serializer->serialize(type_id, int8_t(value_field->GetUint()));
+            if(value_field->IsInt())
+              serializer->serialize(type_id, int8_t(value_field->GetInt()));
+            else
+              throw std::invalid_argument(std::string("Expected an integer value in field: ") +
+                     field.name());
             break;
           case INT16:
-            serializer->serialize(type_id, int16_t(value_field->GetUint()));
+            if(value_field->IsInt())
+              serializer->serialize(type_id, int16_t(value_field->GetInt()));
+            else
+              throw std::invalid_argument(std::string("Expected an integer value in field: ") +
+                     field.name());
             break;
           case INT32:
-            serializer->serialize(type_id, value_field->GetInt());
+            if(value_field->IsInt())
+              serializer->serialize(type_id, value_field->GetInt());
+            else
+              throw std::invalid_argument(std::string("Expected an integer value in field: ") +
+                     field.name());
             break;
           case INT64:
-            serializer->serialize(type_id, value_field->GetInt64());
+            if(value_field->IsInt64())
+              serializer->serialize(type_id, value_field->GetInt64());
+            else
+              throw std::invalid_argument(std::string("Expected an integer value in field: ") +
+                     field.name());
             break;
 
           case FLOAT32:
-            serializer->serialize(type_id, value_field->GetFloat());
+            if(value_field->IsNumber())
+              serializer->serialize(type_id, value_field->GetFloat());
+            else
+              throw std::invalid_argument(std::string("Expected a number value in field: ") +
+                     field.name());
             break;
           case FLOAT64:
-            serializer->serialize(type_id, value_field->GetDouble());
+            if(value_field->IsNumber())
+              serializer->serialize(type_id, value_field->GetDouble());
+            else
+              throw std::invalid_argument(std::string("Expected a number value in field: ") +
+                     field.name());
             break;
 
           case DURATION:
           case TIME: {
+            if(!value_field->IsObject())
+              throw std::invalid_argument(std::string("Expected an object value in field: ") +
+                field.name());
+            if(!value_field->HasMember("secs") || !(*value_field)["secs"].IsInt())
+              throw std::invalid_argument(std::string("Expected 'secs' integer field in: ") +
+                field.name());
+            if(!value_field->HasMember("nsecs") || !(*value_field)["nsecs"].IsInt())
+              throw std::invalid_argument(std::string("Expected 'nsecs' integer field in: ") +
+                field.name());
+              
             uint32_t secs = value_field->GetObject()["secs"].GetInt();
             serializer->serializeUInt32(secs);
 
             uint32_t nsecs = value_field->GetObject()["nsecs"].GetInt();
-            serializer->serializeUInt32(secs);
+            serializer->serializeUInt32(nsecs);
           }
           break;
 
           case STRING: {
             if (has_json_value)
             {
+              if(!value_field->IsString())
+                throw std::invalid_argument(std::string("Expected a string value in field: ") + field.name());
               const char* str = value_field->GetString();
               uint32_t len = value_field->GetStringLength();
               serializer->serializeString(std::string(str, len));
